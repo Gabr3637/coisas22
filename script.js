@@ -36,7 +36,7 @@ var init = function () {
     var animationState = "heart"; // "heart", "explode", "text", "textExplode"
     var stateTimer = 0;
     var textParticles = [];
-    var message = "TE AMO LORAYNE";
+    var message = "Eu não planejei, mas você virou alguém importante pra mim. Topa continuar isso comigo?";
 
     var heartPosition = function (rad) {
         //return [Math.sin(rad), Math.cos(rad)];
