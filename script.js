@@ -1,340 +1,263 @@
 window.requestAnimationFrame =
     window.__requestAnimationFrame ||
-    window.requestAnimationFrame ||
-    window.webkitRequestAnimationFrame ||
-    window.mozRequestAnimationFrame ||
-    window.oRequestAnimationFrame ||
-    window.msRequestAnimationFrame ||
-    (function () {
-        return function (callback, element) {
-            var lastTime = element.__lastTime;
-            if (lastTime === undefined) {
-                lastTime = 0;
-            }
-            var currTime = Date.now();
-            var timeToCall = Math.max(1, 33 - (currTime - lastTime));
-            window.setTimeout(callback, timeToCall);
-            element.__lastTime = currTime + timeToCall;
-        };
-    })();
-
+        window.requestAnimationFrame ||
+        window.webkitRequestAnimationFrame ||
+        window.mozRequestAnimationFrame ||
+        window.oRequestAnimationFrame ||
+        window.msRequestAnimationFrame ||
+        (function () {
+            return function (callback, element) {
+                var lastTime = element.__lastTime;
+                if (lastTime === undefined) {
+                    lastTime = 0;
+                }
+                var currTime = Date.now();
+                var timeToCall = Math.max(1, 33 - (currTime - lastTime));
+                window.setTimeout(callback, timeToCall);
+                element.__lastTime = currTime + timeToCall;
+            };
+        })();
 window.isDevice = (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(((navigator.userAgent || navigator.vendor || window.opera)).toLowerCase()));
-
 var loaded = false;
-
 var init = function () {
     if (loaded) return;
     loaded = true;
-
     var mobile = window.isDevice;
+    var koef = 1; // Usando escala completa para todos os dispositivos
     var canvas = document.getElementById('heart');
-    if (!canvas) return;
-
     var ctx = canvas.getContext('2d');
     var width = canvas.width = innerWidth;
     var height = canvas.height = innerHeight;
     var rand = Math.random;
+    ctx.fillStyle = "rgba(0,0,0,1)";
+    ctx.fillRect(0, 0, width, height);
 
-    var animationState = "heart"; // heart, explode, text, textExplode
+    // Variáveis para controlar a animação
+    var animationState = "heart"; // "heart", "explode", "text", "textExplode"
     var stateTimer = 0;
+    var textParticles = [];
     var message = "Não";
 
-    var heartTargets = [];
-    var textTargets = [];
-    var particles = [];
-
     var heartPosition = function (rad) {
-        return [
-            Math.pow(Math.sin(rad), 3),
-            -(15 * Math.cos(rad) - 5 * Math.cos(2 * rad) - 2 * Math.cos(3 * rad) - Math.cos(4 * rad))
-        ];
+        //return [Math.sin(rad), Math.cos(rad)];
+        return [Math.pow(Math.sin(rad), 3), -(15 * Math.cos(rad) - 5 * Math.cos(2 * rad) - 2 * Math.cos(3 * rad) - Math.cos(4 * rad))];
     };
-
     var scaleAndTranslate = function (pos, sx, sy, dx, dy) {
         return [dx + pos[0] * sx, dy + pos[1] * sy];
     };
 
-    var buildHeartTargets = function () {
-        heartTargets = [];
-
-        var pointsOrigin = [];
-        var dr = 0.1;
-
-        for (var i = 0; i < Math.PI * 2; i += dr) {
-            pointsOrigin.push(scaleAndTranslate(heartPosition(i), 210, 13, 0, 0));
-        }
-        for (var j = 0; j < Math.PI * 2; j += dr) {
-            pointsOrigin.push(scaleAndTranslate(heartPosition(j), 150, 9, 0, 0));
-        }
-        for (var k = 0; k < Math.PI * 2; k += dr) {
-            pointsOrigin.push(scaleAndTranslate(heartPosition(k), 90, 5, 0, 0));
-        }
-
-        var pulseX = 1;
-        var pulseY = 1;
-        for (var p = 0; p < pointsOrigin.length; p++) {
-            heartTargets.push([
-                pulseX * pointsOrigin[p][0] + width / 2,
-                pulseY * pointsOrigin[p][1] + height / 2
-            ]);
-        }
-    };
-
-    var buildTextTargets = function () {
-        textTargets = [];
-
-        var offCanvas = document.createElement('canvas');
-        offCanvas.width = width;
-        offCanvas.height = height;
-        var offCtx = offCanvas.getContext('2d');
-
-        offCtx.clearRect(0, 0, width, height);
-        offCtx.fillStyle = "#000";
-        offCtx.fillRect(0, 0, width, height);
-        offCtx.fillStyle = "#fff";
-        offCtx.textAlign = "center";
-        offCtx.textBaseline = "middle";
-
-        var fontSize = Math.min(width * 0.14, height * 0.18);
-        offCtx.font = "bold " + fontSize + "px Arial";
-
-        var maxTextWidth = width * 0.78;
-        var measured = offCtx.measureText(message).width;
-        if (measured > maxTextWidth) {
-            fontSize = fontSize * (maxTextWidth / measured);
-            offCtx.font = "bold " + fontSize + "px Arial";
-        }
-
-        var textX = width / 2;
-        var textY = height / 2;
-
-        offCtx.fillText(message, textX, textY);
-
-        var step = mobile ? 7 : 5;
-        var imageData = offCtx.getImageData(0, 0, width, height).data;
-
-        for (var y = 0; y < height; y += step) {
-            for (var x = 0; x < width; x += step) {
-                var idx = (y * width + x) * 4 + 3;
-                if (imageData[idx] > 20) {
-                    textTargets.push([
-                        x + (rand() - 0.5) * 2,
-                        y + (rand() - 0.5) * 2
-                    ]);
-                }
-            }
-        }
-
-        if (textTargets.length === 0) {
-            textTargets.push([width / 2, height / 2]);
-        }
-    };
-
-    var createParticles = function () {
-        particles = [];
-
-        var count = heartTargets.length || 1;
-        var traceCount = mobile ? 25 : 40;
-
-        for (var i = 0; i < count; i++) {
-            var x = rand() * width;
-            var y = rand() * height;
-
-            particles[i] = {
-                x: x,
-                y: y,
-                vx: 0,
-                vy: 0,
-                q: i,
-                force: 0.88 + rand() * 0.06,
-                speed: 0.8 + rand() * 1.2,
-                color: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.35)",
-                trace: [],
-                targetX: x,
-                targetY: y,
-                homeIndex: i,
-                textIndex: i
-            };
-
-            for (var k = 0; k < traceCount; k++) {
-                particles[i].trace[k] = { x: x, y: y };
-            }
-        }
-    };
-
-    var assignTargets = function (targetArray, kind) {
-        if (!targetArray || targetArray.length === 0 || particles.length === 0) return;
-
-        for (var i = 0; i < particles.length; i++) {
-            var p = particles[i];
-            var idx = Math.floor(i * targetArray.length / particles.length);
-            if (idx >= targetArray.length) idx = targetArray.length - 1;
-
-            p.q = idx;
-            p.targetX = targetArray[idx][0];
-            p.targetY = targetArray[idx][1];
-
-            if (kind === "heart") {
-                p.color = "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.35)";
-            }
-        }
-    };
-
-    var setState = function (nextState) {
-        if (animationState === nextState) return;
-        animationState = nextState;
-        stateTimer = 0;
-
-        if (nextState === "heart") {
-            assignTargets(heartTargets, "heart");
-        } else if (nextState === "text") {
-            assignTargets(textTargets, "text");
-        }
-    };
-
-    var rebuildScene = function () {
+    window.addEventListener('resize', function () {
         width = canvas.width = innerWidth;
         height = canvas.height = innerHeight;
-
         ctx.fillStyle = "rgba(0,0,0,1)";
         ctx.fillRect(0, 0, width, height);
+    });
 
-        buildHeartTargets();
-        buildTextTargets();
+    var traceCount = mobile ? 30 : 50;
+    var pointsOrigin = [];
+    var i;
+    var dr = 0.1; // Mesmo valor para mobile e desktop para melhor qualidade
+    for (i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 210, 13, 0, 0));
+    for (i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 150, 9, 0, 0));
+    for (i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 90, 5, 0, 0));
+    var heartPointsCount = pointsOrigin.length;
 
-        if (particles.length === 0) {
-            createParticles();
-        }
-
-        if (animationState === "text" || animationState === "textExplode") {
-            assignTargets(textTargets, "text");
-        } else {
-            assignTargets(heartTargets, "heart");
+    var targetPoints = [];
+    var pulse = function (kx, ky) {
+        for (i = 0; i < pointsOrigin.length; i++) {
+            targetPoints[i] = [];
+            targetPoints[i][0] = kx * pointsOrigin[i][0] + width / 2;
+            targetPoints[i][1] = ky * pointsOrigin[i][1] + height / 2;
         }
     };
 
-    window.addEventListener('resize', function () {
-        rebuildScene();
-    });
+    // Função para criar partículas de texto
+    var createTextParticles = function() {
+        textParticles = [];
+        var fontSize = Math.min(width, height) * 0.08;
+        ctx.font = fontSize + "px Arial";
+        ctx.textAlign = "center";
+        
+        var textWidth = ctx.measureText(message).width;
+        var startX = width / 2 - textWidth / 2;
+        var startY = height / 2;
+        
+        // Criar partículas para cada letra
+        var letterSpacing = textWidth / message.length;
+        for (var i = 0; i < message.length; i++) {
+            var letter = message[i];
+            var letterX = startX + i * letterSpacing + letterSpacing / 2;
+            
+            // Criar apenas uma partícula por letra para evitar duplicação
+            var particlesPerLetter = 1; // Reduzido para evitar duplicação
+            for (var j = 0; j < particlesPerLetter; j++) {
+                // Distribuir as partículas em posições iniciais mais espalhadas
+                var initialX = rand() * width;
+                var initialY = rand() * height;
+                
+                textParticles.push({
+                    x: initialX,
+                    y: initialY,
+                    targetX: letterX,
+                    targetY: startY,
+                    vx: (rand() - 0.5) * 5, // Velocidade inicial reduzida
+                    vy: (rand() - 0.5) * 5, // Velocidade inicial reduzida
+                    color: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.7)",
+                    letter: letter,
+                    size: fontSize * (0.8 + rand() * 0.2), // Menos variação no tamanho
+                    force: 0.2 * rand() + 0.7,
+                    speed: rand() + 5,
+                    opacity: 0, // Começar invisível
+                    targetOpacity: 0.7 + rand() * 0.3 // Opacidade alvo
+                });
+            }
+        }
+    };
 
-    buildHeartTargets();
-    buildTextTargets();
-    createParticles();
-    assignTargets(heartTargets, "heart");
+    var e = [];
+    for (i = 0; i < heartPointsCount; i++) {
+        var x = rand() * width;
+        var y = rand() * height;
+        e[i] = {
+            vx: 0,
+            vy: 0,
+            R: 2,
+            speed: rand() + 5,
+            q: ~~(rand() * heartPointsCount),
+            D: 2 * (i % 2) - 1,
+            force: 0.2 * rand() + 0.7,
+            f: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.3)",
+            trace: []
+        };
+        for (var k = 0; k < traceCount; k++) e[i].trace[k] = {x: x, y: y};
+    }
 
     var config = {
-        traceK: mobile ? 0.34 : 0.4,
+        traceK: 0.4,
         timeDelta: 0.01
     };
 
     var time = 0;
-    var last = 0;
-
-    var loop = function (ts) {
-        if (!last) last = ts;
-        var dt = Math.min(0.05, (ts - last) / 1000 || config.timeDelta);
-        last = ts;
-
-        stateTimer += dt;
-
+    var loop = function () {
+        var n = -Math.cos(time);
+        
+        // Gerenciar estados da animação
+        stateTimer += 0.01;
+        
         if (animationState === "heart" && stateTimer > 5) {
-            setState("explode");
-        } else if (animationState === "explode" && stateTimer > 1) {
-            setState("text");
-        } else if (animationState === "text" && stateTimer > 5) {
-            setState("textExplode");
-        } else if (animationState === "textExplode" && stateTimer > 1) {
-            setState("heart");
+            animationState = "explode";
+            stateTimer = 0;
+        } 
+        else if (animationState === "explode" && stateTimer > 1) {
+            animationState = "text";
+            stateTimer = 0;
+            createTextParticles();
         }
-
-        ctx.fillStyle = "rgba(0,0,0,.12)";
+        else if (animationState === "text" && stateTimer > 5) {
+            animationState = "textExplode";
+            stateTimer = 0;
+        }
+        else if (animationState === "textExplode" && stateTimer > 1) {
+            animationState = "heart";
+            stateTimer = 0;
+        }
+        
+        // Limpar tela
+        ctx.fillStyle = "rgba(0,0,0,.1)";
         ctx.fillRect(0, 0, width, height);
-
-        var centerX = width / 2;
-        var centerY = height / 2;
-
-        if (animationState === "heart" || animationState === "text") {
-            time += dt * (animationState === "heart" ? 1.1 : 0.8);
-
-            for (var i = 0; i < particles.length; i++) {
-                var u = particles[i];
-                var tx = u.targetX;
-                var ty = u.targetY;
-
-                var dx = tx - u.x;
-                var dy = ty - u.y;
-                var dist = Math.sqrt(dx * dx + dy * dy) + 0.0001;
-
-                var pull = animationState === "heart" ? 0.028 : 0.022;
-
-                u.vx += (dx / dist) * pull * u.speed;
-                u.vy += (dy / dist) * pull * u.speed;
-
-                u.vx += (rand() - 0.5) * 0.02;
-                u.vy += (rand() - 0.5) * 0.02;
-
+        
+        if (animationState === "heart" || animationState === "explode") {
+            pulse((1 + n) * .5, (1 + n) * .5);
+            time += ((Math.sin(time)) < 0 ? 9 : (n > 0.8) ? .2 : 1) * config.timeDelta;
+            
+            // Desenhar coração
+            for (i = e.length; i--;) {
+                var u = e[i];
+                
+                // Se estiver no estado de explosão, adicionar velocidade aleatória
+                if (animationState === "explode") {
+                    u.vx += (rand() - 0.5) * 2;
+                    u.vy += (rand() - 0.5) * 2;
+                } else {
+                    var q = targetPoints[u.q];
+                    var dx = u.trace[0].x - q[0];
+                    var dy = u.trace[0].y - q[1];
+                    var length = Math.sqrt(dx * dx + dy * dy);
+                    if (10 > length) {
+                        if (0.95 < rand()) {
+                            u.q = ~~(rand() * heartPointsCount);
+                        }
+                        else {
+                            if (0.99 < rand()) {
+                                u.D *= -1;
+                            }
+                            u.q += u.D;
+                            u.q %= heartPointsCount;
+                            if (0 > u.q) {
+                                u.q += heartPointsCount;
+                            }
+                        }
+                    }
+                    u.vx += -dx / length * u.speed;
+                    u.vy += -dy / length * u.speed;
+                }
+                
+                u.trace[0].x += u.vx;
+                u.trace[0].y += u.vy;
                 u.vx *= u.force;
                 u.vy *= u.force;
-
-                u.x += u.vx;
-                u.y += u.vy;
+                for (k = 0; k < u.trace.length - 1;) {
+                    var T = u.trace[k];
+                    var N = u.trace[++k];
+                    N.x -= config.traceK * (N.x - T.x);
+                    N.y -= config.traceK * (N.y - T.y);
+                }
+                ctx.fillStyle = u.f;
+                for (k = 0; k < u.trace.length; k++) {
+                    ctx.fillRect(u.trace[k].x, u.trace[k].y, 1, 1);
+                }
             }
-        } else if (animationState === "explode") {
-            for (var j = 0; j < particles.length; j++) {
-                var p = particles[j];
-                var ex = p.x - centerX;
-                var ey = p.y - centerY;
-                var ed = Math.sqrt(ex * ex + ey * ey) + 0.0001;
-
-                var impulse = 0.7 + rand() * 1.4;
-
-                p.vx += (ex / ed) * impulse + (rand() - 0.5) * 0.8;
-                p.vy += (ey / ed) * impulse + (rand() - 0.5) * 0.8;
-
-                p.vx *= 0.98;
-                p.vy *= 0.98;
-
-                p.x += p.vx;
-                p.y += p.vy;
-            }
-        } else if (animationState === "textExplode") {
-            for (var m = 0; m < particles.length; m++) {
-                var t = particles[m];
-
-                t.vy += 0.04; // gravidade leve
-                t.vx *= 0.985;
-                t.vy *= 0.985;
-
-                t.x += t.vx;
-                t.y += t.vy;
-            }
-        }
-
-        for (var a = 0; a < particles.length; a++) {
-            var u2 = particles[a];
-
-            if (u2.trace.length > 0) {
-                u2.trace[0].x = u2.x;
-                u2.trace[0].y = u2.y;
-            }
-
-            for (var b = 0; b < u2.trace.length - 1; b++) {
-                var T = u2.trace[b];
-                var N = u2.trace[b + 1];
-                N.x -= config.traceK * (N.x - T.x);
-                N.y -= config.traceK * (N.y - T.y);
-            }
-
-            ctx.fillStyle = u2.color;
-            for (var c = 0; c < u2.trace.length; c++) {
-                ctx.fillRect(u2.trace[c].x, u2.trace[c].y, 1, 1);
+        } 
+        else if (animationState === "text" || animationState === "textExplode") {
+            // Desenhar partículas de texto
+            for (i = 0; i < textParticles.length; i++) {
+                var p = textParticles[i];
+                
+                if (animationState === "text") {
+                    // Mover partículas para formar o texto de forma mais suave
+                    var dx = p.targetX - p.x;
+                    var dy = p.targetY - p.y;
+                    // Movimento mais lento e suave
+                    p.x += dx * 0.03; // Reduzido de 0.1 para 0.03
+                    p.y += dy * 0.03; // Reduzido de 0.1 para 0.03
+                    
+                    // Aumentar gradualmente a opacidade
+                    if (p.opacity < p.targetOpacity) {
+                        p.opacity += 0.01;
+                    }
+                } else {
+                    // Explodir partículas
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vx *= 0.98;
+                    p.vy *= 0.98;
+                    p.vy += 0.1; // Gravidade
+                    
+                    // Diminuir gradualmente a opacidade
+                    p.opacity -= 0.02;
+                    if (p.opacity < 0) p.opacity = 0;
+                }
+                
+                // Desenhar partícula com opacidade
+                ctx.font = p.size + "px Arial";
+                ctx.fillStyle = p.color.replace(".7)", p.opacity + ")");
+                ctx.fillText(p.letter, p.x, p.y);
             }
         }
 
         window.requestAnimationFrame(loop, canvas);
     };
-
-    window.requestAnimationFrame(loop, canvas);
+    loop();
 };
 
 var s = document.readyState;
