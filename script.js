@@ -7,16 +7,13 @@ window.requestAnimationFrame =
     window.msRequestAnimationFrame ||
     (function () {
         return function (callback, element) {
-            var lastTime = element.__lastTime;
-            if (lastTime === undefined) lastTime = 0;
+            var lastTime = element.__lastTime || 0;
             var currTime = Date.now();
             var timeToCall = Math.max(1, 33 - (currTime - lastTime));
-            window.setTimeout(callback, timeToCall);
+            setTimeout(callback, timeToCall);
             element.__lastTime = currTime + timeToCall;
         };
     })();
-
-window.isDevice = (/android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(((navigator.userAgent || navigator.vendor || window.opera)).toLowerCase()));
 
 var loaded = false;
 var init = function () {
@@ -28,14 +25,16 @@ var init = function () {
     var width = canvas.width = innerWidth;
     var height = canvas.height = innerHeight;
     var rand = Math.random;
-    var mobile = window.isDevice;
+    var isMobile = /android|iphone|ipad|ipod/i.test(navigator.userAgent.toLowerCase());
 
-    // Configurações
-    var message = "Não";                    // ← Mude aqui a mensagem
+    var message = "Não";  // ← Altere aqui quando quiser
+
     var animationState = "heart";
     var stateTimer = 0;
+    var heartParticles = [];
     var textParticles = [];
 
+    // Coração
     var heartPosition = function (rad) {
         return [
             Math.pow(Math.sin(rad), 3),
@@ -48,51 +47,50 @@ var init = function () {
     };
 
     // Resize
-    window.addEventListener('resize', function () {
+    window.addEventListener('resize', () => {
         width = canvas.width = innerWidth;
         height = canvas.height = innerHeight;
     });
 
-    // Criação do coração
-    var traceCount = mobile ? 25 : 45;
+    // Criar partículas do coração
+    var traceCount = isMobile ? 20 : 35;
     var pointsOrigin = [];
-    var dr = 0.08;
-    for (var i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 220, 14, 0, 0));
-    for (var i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 160, 10, 0, 0));
-    for (var i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 100, 6, 0, 0));
+    var dr = 0.085;
+    for (let i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 230, 15, 0, 0));
+    for (let i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 165, 11, 0, 0));
+    for (let i = 0; i < Math.PI * 2; i += dr) pointsOrigin.push(scaleAndTranslate(heartPosition(i), 105, 7, 0, 0));
 
     var heartPointsCount = pointsOrigin.length;
-    var targetPoints = [];
-    var e = [];
 
-    // Partículas do coração
-    for (var i = 0; i < heartPointsCount; i++) {
-        var x = rand() * width;
-        var y = rand() * height;
-        e[i] = {
-            vx: 0, vy: 0,
-            speed: rand() * 3 + 4,
+    for (let i = 0; i < heartPointsCount; i++) {
+        heartParticles.push({
+            x: rand() * width,
+            y: rand() * height,
+            vx: 0,
+            vy: 0,
+            speed: rand() * 4 + 5,
             q: ~~(rand() * heartPointsCount),
-            D: 2 * (i % 2) - 1,
-            force: 0.85,
-            hue: 340 + rand() * 30, // Tons de vermelho/rosa
-            trace: []
-        };
-        for (var k = 0; k < traceCount; k++) e[i].trace[k] = {x: x, y: y};
+            force: 0.82,
+            hue: 330 + rand() * 40,
+            alpha: 1,
+            trace: Array(traceCount).fill(0).map(() => ({x: rand()*width, y: rand()*height}))
+        });
     }
 
+    var targetPoints = new Array(heartPointsCount);
+
     var pulse = function (kx, ky) {
-        for (var i = 0; i < pointsOrigin.length; i++) {
+        for (let i = 0; i < pointsOrigin.length; i++) {
             targetPoints[i] = [
-                kx * pointsOrigin[i][0] + width / 2,
-                ky * pointsOrigin[i][1] + height / 2
+                width / 2 + kx * pointsOrigin[i][0],
+                height / 2 + ky * pointsOrigin[i][1]
             ];
         }
     };
 
-    var createTextParticles = function() {
+    var createTextParticles = function () {
         textParticles = [];
-        var fontSize = Math.min(width, height) * 0.12;
+        var fontSize = Math.min(width, height) * 0.13;
         ctx.font = `bold ${fontSize}px Arial`;
         ctx.textAlign = "center";
 
@@ -100,26 +98,23 @@ var init = function () {
         var startX = width / 2 - textWidth / 2;
         var startY = height * 0.48;
 
-        var letterSpacing = textWidth / message.length;
-
-        for (var i = 0; i < message.length; i++) {
+        for (let i = 0; i < message.length; i++) {
             var letter = message[i];
-            var letterX = startX + i * letterSpacing + letterSpacing / 2;
+            var letterX = startX + (textWidth / message.length) * (i + 0.5);
 
-            // Múltiplas partículas por letra (melhor efeito)
-            for (var j = 0; j < 8; j++) {
+            // Mais partículas por letra para efeito bonito
+            for (let j = 0; j < (isMobile ? 6 : 12); j++) {
                 textParticles.push({
                     x: rand() * width,
-                    y: rand() * height * 0.6,
+                    y: rand() * height * 0.7,
                     targetX: letterX,
-                    targetY: startY,
-                    vx: (rand() - 0.5) * 8,
-                    vy: (rand() - 0.5) * 8,
-                    color: `hsla(${340 + rand()*40}, 100%, ${60 + rand()*30}%, 1)`,
-                    letter: letter,
-                    size: fontSize * (0.7 + rand() * 0.6),
+                    targetY: startY + (rand() - 0.5) * 15,
+                    vx: (rand() - 0.5) * 12,
+                    vy: (rand() - 0.5) * 12,
+                    size: fontSize * (0.75 + rand() * 0.5),
+                    color: `hsla(${340 + rand()*35}, 100%, ${65 + rand()*30}%, 1)`,
                     opacity: 0,
-                    targetOpacity: 0.9 + rand() * 0.1
+                    letter: letter
                 });
             }
         }
@@ -127,89 +122,96 @@ var init = function () {
 
     var time = 0;
     var loop = function () {
-        var n = -Math.cos(time);
         stateTimer += 0.016;
 
         // Controle de estados
-        if (animationState === "heart" && stateTimer > 6) {
-            animationState = "explode"; stateTimer = 0;
-        } else if (animationState === "explode" && stateTimer > 1.2) {
-            animationState = "text"; stateTimer = 0;
+        if (animationState === "heart" && stateTimer > 5.5) {
+            animationState = "explode";
+            stateTimer = 0;
+        } else if (animationState === "explode" && stateTimer > 1.8) {
+            animationState = "text";
+            stateTimer = 0;
             createTextParticles();
         } else if (animationState === "text" && stateTimer > 5) {
-            animationState = "textExplode"; stateTimer = 0;
-        } else if (animationState === "textExplode" && stateTimer > 1.8) {
-            animationState = "heart"; stateTimer = 0;
+            animationState = "textExplode";
+            stateTimer = 0;
+        } else if (animationState === "textExplode" && stateTimer > 2) {
+            animationState = "heart";
+            stateTimer = 0;
+            textParticles = [];
         }
 
-        // Fade suave
-        ctx.fillStyle = "rgba(10, 0, 15, 0.12)";
+        // Fade background
+        ctx.fillStyle = "rgba(8, 0, 18, 0.14)";
         ctx.fillRect(0, 0, width, height);
 
         if (animationState === "heart" || animationState === "explode") {
-            pulse(0.9 + n * 0.2, 0.9 + n * 0.2);
-            time += 0.018;
+            var n = -Math.cos(time);
+            pulse(0.92 + n * 0.18, 0.92 + n * 0.18);
+            time += 0.022;
 
-            for (var i = e.length - 1; i >= 0; i--) {
-                var u = e[i];
+            for (let i = 0; i < heartParticles.length; i++) {
+                let p = heartParticles[i];
 
                 if (animationState === "explode") {
-                    u.vx += (rand() - 0.5) * 4.5;
-                    u.vy += (rand() - 0.5) * 4.5 - 1;
+                    p.vx += (rand() - 0.5) * 6.5;
+                    p.vy += (rand() - 0.5) * 6.5 - 2.5;
+                    p.alpha = Math.max(0.1, p.alpha - 0.012);
                 } else {
-                    var q = targetPoints[u.q];
-                    var dx = u.trace[0].x - q[0];
-                    var dy = u.trace[0].y - q[1];
-                    var dist = Math.sqrt(dx * dx + dy * dy) || 1;
+                    let target = targetPoints[p.q];
+                    let dx = p.trace[0].x - target[0];
+                    let dy = p.trace[0].y - target[1];
+                    let dist = Math.hypot(dx, dy) || 1;
 
-                    if (dist < 12) {
-                        u.q = ~~(rand() * heartPointsCount);
+                    if (dist < 14) {
+                        p.q = ~~(rand() * heartPointsCount);
                     } else {
-                        u.vx += -dx / dist * u.speed;
-                        u.vy += -dy / dist * u.speed;
+                        p.vx += (dx / dist) * -p.speed;
+                        p.vy += (dy / dist) * -p.speed;
                     }
                 }
 
-                u.trace[0].x += u.vx;
-                u.trace[0].y += u.vy;
-                u.vx *= u.force;
-                u.vy *= u.force;
+                p.trace[0].x += p.vx;
+                p.trace[0].y += p.vy;
+                p.vx *= p.force;
+                p.vy *= p.force;
 
                 // Trail
-                for (var k = 0; k < u.trace.length - 1; k++) {
-                    var T = u.trace[k];
-                    var N = u.trace[k + 1];
-                    N.x = N.x * 0.6 + T.x * 0.4;
-                    N.y = N.y * 0.6 + T.y * 0.4;
+                for (let k = 0; k < p.trace.length - 1; k++) {
+                    let a = p.trace[k];
+                    let b = p.trace[k + 1];
+                    b.x = b.x * 0.65 + a.x * 0.35;
+                    b.y = b.y * 0.65 + a.y * 0.35;
                 }
 
-                // Desenho com glow
-                ctx.fillStyle = `hsla(${u.hue}, 100%, 75%, 0.9)`;
-                for (var k = 0; k < u.trace.length; k++) {
-                    var size = k < 3 ? 1.8 : 1;
-                    ctx.fillRect(u.trace[k].x, u.trace[k].y, size, size);
+                ctx.fillStyle = `hsla(${p.hue}, 100%, 78%, ${p.alpha})`;
+                for (let k = 0; k < p.trace.length; k++) {
+                    let size = k < 4 ? 2.2 : 1.1;
+                    ctx.fillRect(p.trace[k].x, p.trace[k].y, size, size);
                 }
             }
-        } 
-        else if (animationState === "text" || animationState === "textExplode") {
-            for (var i = 0; i < textParticles.length; i++) {
-                var p = textParticles[i];
+        }
+
+        // Texto
+        if (animationState === "text" || animationState === "textExplode") {
+            for (let i = 0; i < textParticles.length; i++) {
+                let p = textParticles[i];
 
                 if (animationState === "text") {
-                    p.x += (p.targetX - p.x) * 0.08;
-                    p.y += (p.targetY - p.y) * 0.08;
-                    p.opacity = Math.min(p.targetOpacity, p.opacity + 0.025);
+                    p.x += (p.targetX - p.x) * 0.085;
+                    p.y += (p.targetY - p.y) * 0.085;
+                    p.opacity = Math.min(1, p.opacity + 0.028);
                 } else {
                     p.x += p.vx;
                     p.y += p.vy;
                     p.vx *= 0.975;
                     p.vy *= 0.975;
-                    p.vy += 0.18; // gravidade
-                    p.opacity -= 0.018;
+                    p.vy += 0.22;
+                    p.opacity -= 0.022;
                 }
 
                 ctx.save();
-                ctx.globalAlpha = p.opacity;
+                ctx.globalAlpha = Math.max(0, p.opacity);
                 ctx.font = `${p.size}px Arial`;
                 ctx.fillStyle = p.color;
                 ctx.fillText(p.letter, p.x, p.y);
@@ -217,12 +219,14 @@ var init = function () {
             }
         }
 
-        window.requestAnimationFrame(loop, canvas);
+        requestAnimationFrame(loop);
     };
 
     loop();
 };
 
-var s = document.readyState;
-if (s === 'complete' || s === 'loaded' || s === 'interactive') init();
-else document.addEventListener('DOMContentLoaded', init, false);
+if (document.readyState === 'complete' || document.readyState === 'loaded' || document.readyState === 'interactive') {
+    init();
+} else {
+    document.addEventListener('DOMContentLoaded', init);
+}
