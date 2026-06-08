@@ -33,7 +33,7 @@ var init = function () {
     ctx.fillRect(0, 0, width, height);
 
     // Variáveis para controlar a animação
-    var animationState = "heart"; // "heart", "explode", "text", "textExplode"
+    var animationState = "heart"; // "heart", "explode", "text", "textFade", "textExplode"
     var stateTimer = 0;
     var textParticles = [];
     var message = "Lory ❤️";
@@ -130,7 +130,8 @@ var init = function () {
             D: 2 * (i % 2) - 1,
             force: 0.2 * rand() + 0.7,
             f: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.3)",
-            trace: []
+            trace: [],
+            particleOpacity: 1 // Opacidade das partículas
         };
         for (var k = 0; k < traceCount; k++) e[i].trace[k] = {x: x, y: y};
     }
@@ -158,13 +159,17 @@ var init = function () {
             stateTimer = 0;
             firstFrameOfState = true;
             createTextParticles();
+            // Resetar opacidade das partículas
+            for (i = 0; i < e.length; i++) {
+                e[i].particleOpacity = 1;
+            }
         }
-        else if (animationState === "text" && stateTimer > 5) {
-            animationState = "textExplode";
+        else if (animationState === "text" && stateTimer > 4) {
+            animationState = "textFade";
             stateTimer = 0;
             firstFrameOfState = true;
         }
-        else if (animationState === "textExplode" && stateTimer > 1) {
+        else if (animationState === "textFade" && stateTimer > 1) {
             animationState = "heart";
             stateTimer = 0;
             firstFrameOfState = true;
@@ -232,8 +237,31 @@ var init = function () {
                 }
             }
         } 
-        else if (animationState === "text" || animationState === "textExplode") {
-            // Desenhar partículas de texto
+        else if (animationState === "text" || animationState === "textFade") {
+            // Desenhar partículas que explodiram
+            for (i = e.length; i--;) {
+                var u = e[i];
+                
+                if (animationState === "textFade") {
+                    // Diminuir opacidade das partículas
+                    u.particleOpacity -= 0.01;
+                    if (u.particleOpacity < 0) u.particleOpacity = 0;
+                }
+                
+                // Desenhar partículas com opacidade
+                if (u.particleOpacity > 0) {
+                    var originalColor = u.f;
+                    // Extrair os valores HSLA e aplicar opacidade
+                    var colorParts = originalColor.match(/[\d.]+/g);
+                    ctx.fillStyle = "hsla(" + colorParts[0] + "," + colorParts[1] + "%," + colorParts[2] + "%," + (u.particleOpacity * 0.3) + ")";
+                    
+                    for (k = 0; k < u.trace.length; k++) {
+                        ctx.fillRect(u.trace[k].x, u.trace[k].y, 1, 1);
+                    }
+                }
+            }
+            
+            // Desenhar texto por cima das partículas
             for (i = 0; i < textParticles.length; i++) {
                 var p = textParticles[i];
                 
@@ -257,20 +285,13 @@ var init = function () {
                         }
                     }
                 } else {
-                    // Explodir partículas
-                    p.x += p.vx;
-                    p.y += p.vy;
-                    p.vx *= 0.98;
-                    p.vy *= 0.98;
-                    p.vy += 0.1; // Gravidade
-                    
-                    // Diminuir gradualmente a opacidade
+                    // textFade - diminuir opacidade
                     p.opacity -= 0.02;
                     if (p.opacity < 0) p.opacity = 0;
                 }
                 
-                // Desenhar partícula com opacidade (só se apareceu ou está explodindo)
-                if (p.hasAppeared || animationState === "textExplode") {
+                // Desenhar partícula com opacidade
+                if (p.opacity > 0) {
                     ctx.font = p.size + "px Arial";
                     ctx.fillStyle = p.color.replace(".7)", p.opacity + ")");
                     ctx.fillText(p.letter, p.x, p.y);
