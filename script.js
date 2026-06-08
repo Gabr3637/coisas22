@@ -71,8 +71,8 @@ var init = function () {
         }
     };
 
-    // Função para criar partículas de texto
-    var createTextParticles = function() {
+    // Função para converter partículas do coração em partículas de texto
+    var convertHeartToTextParticles = function() {
         textParticles = [];
         var fontSize = Math.min(width, height) * 0.08;
         ctx.font = fontSize + "px Arial";
@@ -82,34 +82,37 @@ var init = function () {
         var startX = width / 2 - textWidth / 2;
         var startY = height / 2;
         
-        // Criar partículas para cada letra
+        // Distribuir partículas do coração entre as letras
+        var particlesPerLetter = Math.ceil(e.length / message.length);
         var letterSpacing = textWidth / message.length;
+        var particleIndex = 0;
+        
         for (var i = 0; i < message.length; i++) {
             var letter = message[i];
             var letterX = startX + i * letterSpacing + letterSpacing / 2;
             
-            // Criar apenas uma partícula por letra para evitar duplicação
-            var particlesPerLetter = 1; // Reduzido para evitar duplicação
-            for (var j = 0; j < particlesPerLetter; j++) {
-                // Distribuir as partículas em posições iniciais mais espalhadas
-                var initialX = rand() * width;
-                var initialY = rand() * height;
+            // Atribuir partículas do coração a esta letra
+            for (var j = 0; j < particlesPerLetter && particleIndex < e.length; j++) {
+                var heartParticle = e[particleIndex];
                 
                 textParticles.push({
-                    x: initialX,
-                    y: initialY,
+                    x: heartParticle.trace[0].x,
+                    y: heartParticle.trace[0].y,
                     targetX: letterX,
                     targetY: startY,
-                    vx: (rand() - 0.5) * 5, // Velocidade inicial reduzida
-                    vy: (rand() - 0.5) * 5, // Velocidade inicial reduzida
-                    color: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.7)",
+                    vx: heartParticle.vx,
+                    vy: heartParticle.vy,
+                    color: heartParticle.f,
                     letter: letter,
-                    size: fontSize * (0.8 + rand() * 0.2), // Menos variação no tamanho
+                    size: fontSize * (0.8 + rand() * 0.2),
                     force: 0.2 * rand() + 0.7,
                     speed: rand() + 5,
-                    opacity: 0, // Começar invisível
-                    targetOpacity: 0.7 + rand() * 0.3 // Opacidade alvo
+                    opacity: 1, // Começar visível já que vinha do coração
+                    targetOpacity: 0.7 + rand() * 0.3,
+                    isMovingToText: false // Ainda está em fase de explosão
                 });
+                
+                particleIndex++;
             }
         }
     };
@@ -151,7 +154,7 @@ var init = function () {
         else if (animationState === "explode" && stateTimer > 1) {
             animationState = "text";
             stateTimer = 0;
-            createTextParticles();
+            convertHeartToTextParticles(); // Converter as partículas do coração em letras
         }
         else if (animationState === "text" && stateTimer > 5) {
             animationState = "textExplode";
@@ -227,14 +230,16 @@ var init = function () {
                     // Mover partículas para formar o texto de forma mais suave
                     var dx = p.targetX - p.x;
                     var dy = p.targetY - p.y;
-                    // Movimento mais lento e suave
-                    p.x += dx * 0.03; // Reduzido de 0.1 para 0.03
-                    p.y += dy * 0.03; // Reduzido de 0.1 para 0.03
                     
-                    // Aumentar gradualmente a opacidade
-                    if (p.opacity < p.targetOpacity) {
-                        p.opacity += 0.01;
+                    // Movimento mais lento e suave
+                    p.x += dx * 0.05; // Movimento suave em direção ao texto
+                    p.y += dy * 0.05;
+                    
+                    // Marcar quando começar a se mover para o texto
+                    if (!p.isMovingToText && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
+                        p.isMovingToText = true;
                     }
+                    
                 } else {
                     // Explodir partículas
                     p.x += p.vx;
@@ -249,9 +254,11 @@ var init = function () {
                 }
                 
                 // Desenhar partícula com opacidade
-                ctx.font = p.size + "px Arial";
-                ctx.fillStyle = p.color.replace(".7)", p.opacity + ")");
-                ctx.fillText(p.letter, p.x, p.y);
+                if (p.opacity > 0) {
+                    ctx.font = p.size + "px Arial";
+                    ctx.fillStyle = p.color.replace(".3)", Math.max(0, p.opacity) + ")");
+                    ctx.fillText(p.letter, p.x, p.y);
+                }
             }
         }
 
