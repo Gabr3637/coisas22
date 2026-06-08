@@ -163,11 +163,20 @@ var init = function () {
         else if (animationState === "textExplode" && stateTimer > 1) {
             animationState = "heart";
             stateTimer = 0;
+            // Limpar completamente a tela quando volta ao estado "heart"
+            ctx.fillStyle = "rgba(0,0,0,1)";
+            ctx.fillRect(0, 0, width, height);
         }
         
-        // Limpar tela
-        ctx.fillStyle = "rgba(0,0,0,.1)";
-        ctx.fillRect(0, 0, width, height);
+        // Limpar tela com opacidade muito baixa para efeito de rastro
+        if (animationState !== "textExplode") {
+            ctx.fillStyle = "rgba(0,0,0,.02)";
+            ctx.fillRect(0, 0, width, height);
+        } else {
+            // Durante a explosão do texto, limpar mais rapidamente
+            ctx.fillStyle = "rgba(0,0,0,.05)";
+            ctx.fillRect(0, 0, width, height);
+        }
         
         if (animationState === "heart" || animationState === "explode") {
             pulse((1 + n) * .5, (1 + n) * .5);
