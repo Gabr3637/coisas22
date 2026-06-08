@@ -71,8 +71,8 @@ var init = function () {
         }
     };
 
-    // Função para converter partículas do coração em partículas de texto
-    var convertHeartToTextParticles = function() {
+    // Função para criar partículas de texto
+    var createTextParticles = function() {
         textParticles = [];
         var fontSize = Math.min(width, height) * 0.08;
         ctx.font = fontSize + "px Arial";
@@ -82,37 +82,34 @@ var init = function () {
         var startX = width / 2 - textWidth / 2;
         var startY = height / 2;
         
-        // Distribuir partículas do coração entre as letras
-        var particlesPerLetter = Math.ceil(e.length / message.length);
+        // Criar partículas para cada letra
         var letterSpacing = textWidth / message.length;
-        var particleIndex = 0;
-        
         for (var i = 0; i < message.length; i++) {
             var letter = message[i];
             var letterX = startX + i * letterSpacing + letterSpacing / 2;
             
-            // Atribuir partículas do coração a esta letra
-            for (var j = 0; j < particlesPerLetter && particleIndex < e.length; j++) {
-                var heartParticle = e[particleIndex];
+            // Criar apenas uma partícula por letra para evitar duplicação
+            var particlesPerLetter = 1; // Reduzido para evitar duplicação
+            for (var j = 0; j < particlesPerLetter; j++) {
+                // Distribuir as partículas em posições iniciais mais espalhadas
+                var initialX = rand() * width;
+                var initialY = rand() * height;
                 
                 textParticles.push({
-                    x: heartParticle.trace[0].x,
-                    y: heartParticle.trace[0].y,
-                    targetX: letterX + (rand() - 0.5) * 20, // Adicionar pequena variação
-                    targetY: startY + (rand() - 0.5) * 20,
-                    vx: 0, // Resetar velocidade para suavizar transição
-                    vy: 0,
-                    color: heartParticle.f,
+                    x: initialX,
+                    y: initialY,
+                    targetX: letterX,
+                    targetY: startY,
+                    vx: (rand() - 0.5) * 5, // Velocidade inicial reduzida
+                    vy: (rand() - 0.5) * 5, // Velocidade inicial reduzida
+                    color: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.7)",
                     letter: letter,
-                    size: fontSize * (0.8 + rand() * 0.2),
+                    size: fontSize * (0.8 + rand() * 0.2), // Menos variação no tamanho
                     force: 0.2 * rand() + 0.7,
-                    speed: 0.15 + rand() * 0.1, // Velocidade de movimento até o texto
-                    opacity: 1,
-                    targetOpacity: 0.7 + rand() * 0.3,
-                    isMovingToText: true // Começar movendo para o texto
+                    speed: rand() + 5,
+                    opacity: 0, // Começar invisível
+                    targetOpacity: 0.7 + rand() * 0.3 // Opacidade alvo
                 });
-                
-                particleIndex++;
             }
         }
     };
@@ -154,7 +151,7 @@ var init = function () {
         else if (animationState === "explode" && stateTimer > 1) {
             animationState = "text";
             stateTimer = 0;
-            convertHeartToTextParticles(); // Converter as partículas do coração em letras
+            createTextParticles();
         }
         else if (animationState === "text" && stateTimer > 5) {
             animationState = "textExplode";
@@ -163,20 +160,11 @@ var init = function () {
         else if (animationState === "textExplode" && stateTimer > 1) {
             animationState = "heart";
             stateTimer = 0;
-            // Limpar completamente a tela quando volta ao estado "heart"
-            ctx.fillStyle = "rgba(0,0,0,1)";
-            ctx.fillRect(0, 0, width, height);
         }
         
-        // Limpar tela com opacidade muito baixa para efeito de rastro
-        if (animationState !== "textExplode") {
-            ctx.fillStyle = "rgba(0,0,0,.02)";
-            ctx.fillRect(0, 0, width, height);
-        } else {
-            // Durante a explosão do texto, limpar mais rapidamente
-            ctx.fillStyle = "rgba(0,0,0,.05)";
-            ctx.fillRect(0, 0, width, height);
-        }
+        // Limpar tela
+        ctx.fillStyle = "rgba(0,0,0,.1)";
+        ctx.fillRect(0, 0, width, height);
         
         if (animationState === "heart" || animationState === "explode") {
             pulse((1 + n) * .5, (1 + n) * .5);
@@ -236,24 +224,19 @@ var init = function () {
                 var p = textParticles[i];
                 
                 if (animationState === "text") {
-                    // Mover partículas para formar o texto
+                    // Mover partículas para formar o texto de forma mais suave
                     var dx = p.targetX - p.x;
                     var dy = p.targetY - p.y;
-                    var distance = Math.sqrt(dx * dx + dy * dy);
+                    // Movimento mais lento e suave
+                    p.x += dx * 0.03; // Reduzido de 0.1 para 0.03
+                    p.y += dy * 0.03; // Reduzido de 0.1 para 0.03
                     
-                    // Usar velocidade proporcional para convergência mais suave
-                    if (distance > 1) {
-                        p.x += (dx / distance) * p.speed;
-                        p.y += (dy / distance) * p.speed;
-                    } else {
-                        p.x = p.targetX;
-                        p.y = p.targetY;
+                    // Aumentar gradualmente a opacidade
+                    if (p.opacity < p.targetOpacity) {
+                        p.opacity += 0.01;
                     }
-                    
                 } else {
                     // Explodir partículas
-                    p.vx += (rand() - 0.5) * 0.5;
-                    p.vy += (rand() - 0.5) * 0.5;
                     p.x += p.vx;
                     p.y += p.vy;
                     p.vx *= 0.98;
@@ -266,11 +249,9 @@ var init = function () {
                 }
                 
                 // Desenhar partícula com opacidade
-                if (p.opacity > 0) {
-                    ctx.font = p.size + "px Arial";
-                    ctx.fillStyle = p.color.replace(".3)", Math.max(0, p.opacity) + ")");
-                    ctx.fillText(p.letter, p.x, p.y);
-                }
+                ctx.font = p.size + "px Arial";
+                ctx.fillStyle = p.color.replace(".7)", p.opacity + ")");
+                ctx.fillText(p.letter, p.x, p.y);
             }
         }
 
