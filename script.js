@@ -32,12 +32,17 @@ var init = function () {
     ctx.fillStyle = "rgba(10,5,8,1)";
     ctx.fillRect(0, 0, width, height);
 
+    // Inicializar música
+    var audioElement = document.getElementById('lullaby');
+    var musicStarted = false;
+
     // Variáveis para controlar a animação
     var animationState = "heart"; // "heart", "explode", "text", "textFade", "textExplode"
     var stateTimer = 0;
     var textParticles = [];
     var message = "Lory❤️";
     var firstFrameOfState = true; // Flag para limpeza no início de cada estado
+    var textStateStarted = false; // Flag para detectar quando o estado "text" começou
 
     var heartPosition = function (rad) {
         //return [Math.sin(rad), Math.cos(rad)];
@@ -166,16 +171,31 @@ var init = function () {
         stateTimer += 0.01;
         var oldAnimationState = animationState;
         
-        if (animationState === "heart" && stateTimer > 5) {
+        // TIMING AJUSTADO:
+        // 0-6 segundos: coração pulsando
+        // 6-7 segundos: explosão
+        // 7-11 segundos: texto aparecendo e brilhando
+        // 11-12 segundos: texto desaparecendo
+        // Após 12 segundos: reinicia
+
+        if (animationState === "heart" && stateTimer > 6) {
             animationState = "explode";
             stateTimer = 0;
             firstFrameOfState = true;
+            textStateStarted = false;
         } 
         else if (animationState === "explode" && stateTimer > 1) {
             animationState = "text";
             stateTimer = 0;
             firstFrameOfState = true;
+            textStateStarted = true;
             createTextParticles();
+            
+            // MÚSICA: Quando o texto começa (6 segundos depois), pular para o segundo 23
+            if (audioElement && musicStarted) {
+                audioElement.currentTime = 23;
+            }
+            
             // Resetar opacidade das partículas - começar a desaparecer imediatamente
             for (i = 0; i < e.length; i++) {
                 e[i].particleOpacity = 1;
@@ -190,6 +210,18 @@ var init = function () {
             animationState = "heart";
             stateTimer = 0;
             firstFrameOfState = true;
+            textStateStarted = false;
+            
+            // MÚSICA: Quando a animação reinicia, resetar a música para o início
+            if (audioElement) {
+                audioElement.currentTime = 0;
+                if (!musicStarted) {
+                    musicStarted = true;
+                    audioElement.play().catch(function(error) {
+                        console.log("Erro ao reproduzir áudio:", error);
+                    });
+                }
+            }
         }
         
         // Limpar tela - usar clearRect no primeiro frame de cada estado
