@@ -29,7 +29,7 @@ var init = function () {
     var width = canvas.width = innerWidth;
     var height = canvas.height = innerHeight;
     var rand = Math.random;
-    ctx.fillStyle = "rgba(0,0,0,1)";
+    ctx.fillStyle = "rgba(10,5,8,1)";
     ctx.fillRect(0, 0, width, height);
 
     // Variáveis para controlar a animação
@@ -50,7 +50,7 @@ var init = function () {
     window.addEventListener('resize', function () {
         width = canvas.width = innerWidth;
         height = canvas.height = innerHeight;
-        ctx.fillStyle = "rgba(0,0,0,1)";
+        ctx.fillStyle = "rgba(10,5,8,1)";
         ctx.fillRect(0, 0, width, height);
     });
 
@@ -120,6 +120,20 @@ var init = function () {
         }
     };
 
+    // Cores vermelhas intensas, profundas e vibrantes para melhor variação - PALETA ROMÂNTICA
+    var redColors = [
+        "hsla(0, 100%, 50%, .3)",      // Vermelho brilhante puro
+        "hsla(0, 95%, 45%, .3)",       // Vermelho escarlate profundo
+        "hsla(0, 100%, 42%, .3)",      // Vermelho carmim intenso
+        "hsla(0, 90%, 40%, .3)",       // Vermelho profundo escuro
+        "hsla(0, 100%, 48%, .3)",      // Vermelho vívido
+        "hsla(0, 92%, 38%, .3)",       // Vermelho bordo profundo
+        "hsla(0, 98%, 46%, .3)",       // Vermelho rubi
+        "hsla(0, 100%, 52%, .3)",      // Vermelho luminoso
+        "hsla(0, 88%, 44%, .3)",       // Vermelho marrom avermelhado
+        "hsla(0, 96%, 41%, .3)"        // Vermelho cereja
+    ];
+
     var e = [];
     for (i = 0; i < heartPointsCount; i++) {
         var x = rand() * width;
@@ -132,7 +146,7 @@ var init = function () {
             q: ~~(rand() * heartPointsCount),
             D: 2 * (i % 2) - 1,
             force: 0.2 * rand() + 0.7,
-            f: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.3)",
+            f: redColors[~~(rand() * redColors.length)],
             trace: [],
             particleOpacity: 1 // Opacidade das partículas
         };
@@ -180,11 +194,12 @@ var init = function () {
         
         // Limpar tela - usar clearRect no primeiro frame de cada estado
         if (firstFrameOfState) {
-            ctx.clearRect(0, 0, width, height);
+            ctx.fillStyle = "rgba(10,5,8,1)";
+            ctx.fillRect(0, 0, width, height);
             firstFrameOfState = false;
         } else {
-            // Após o primeiro frame, usar rastro leve
-            ctx.fillStyle = "rgba(0,0,0,.05)";
+            // Após o primeiro frame, usar rastro muito leve com fundo escuro
+            ctx.fillStyle = "rgba(10,5,8,.08)";
             ctx.fillRect(0, 0, width, height);
         }
         
@@ -260,7 +275,7 @@ var init = function () {
                     var originalColor = u.f;
                     // Extrair os valores HSLA e aplicar opacidade
                     var colorParts = originalColor.match(/[\d.]+/g);
-                    ctx.fillStyle = "hsla(" + colorParts[0] + "," + colorParts[1] + "%," + colorParts[2] + "%," + (u.particleOpacity * 0.3) + ")";
+                    ctx.fillStyle = "hsla(" + colorParts[0] + "," + colorParts[1] + "%," + colorParts[2] + "%," + (u.particleOpacity * 0.5) + ")";
                     
                     for (k = 0; k < u.trace.length; k++) {
                         ctx.fillRect(u.trace[k].x, u.trace[k].y, 1, 1);
@@ -268,7 +283,7 @@ var init = function () {
                 }
             }
             
-            // Desenhar texto por cima das partículas com efeito GLOW forte
+            // Desenhar texto por cima das partículas com efeito GLOW INTENSO E ROMÂNTICO
             for (i = 0; i < textParticles.length; i++) {
                 var p = textParticles[i];
                 
@@ -306,16 +321,23 @@ var init = function () {
                     if (p.glowOpacity < 0) p.glowOpacity = 0;
                 }
                 
-                // Desenhar partícula com opacidade e EFEITO GLOW
+                // Desenhar partícula com opacidade e EFEITO GLOW INTENSO E ROMÂNTICO
                 if (p.opacity > 0) {
                     ctx.font = "700 " + p.size + "px 'Tangerine', cursive";
                     
-                    // NOVO: Desenhar múltiplas camadas de brilho (glow) em vermelho
-                    for (var glowIndex = 15; glowIndex > 0; glowIndex--) {
-                        var glowSize = glowIndex * 0.6;
-                        var glowAlpha = p.glowOpacity * (1 - (glowIndex / 15)) * 0.4; // Reduz conforme afasta do centro
-                        ctx.fillStyle = "rgba(255, 50, 50, " + glowAlpha + ")";
-                        ctx.shadowColor = "rgba(255, 50, 50, " + glowAlpha + ")";
+                    // NOVO: Desenhar múltiplas camadas de brilho (glow) em vermelho intenso
+                    // Aumentado: 25 camadas em vez de 15 para glow MUITO mais intenso
+                    for (var glowIndex = 25; glowIndex > 0; glowIndex--) {
+                        var glowSize = glowIndex * 1.5; // Aumentado para brilho muito maior
+                        var glowAlpha = p.glowOpacity * (1 - (glowIndex / 25)) * 0.7; // Muito mais intenso
+                        
+                        // Gradiente de cores vermelhas para efeito romântico perfeito
+                        var hue = 0; // Vermelho puro
+                        var saturation = 100 - (glowIndex / 25) * 15; // Desatura ligeiramente conforme afasta
+                        var lightness = 45 + (glowIndex / 25) * 15; // Fica mais claro conforme afasta
+                        
+                        ctx.fillStyle = "hsla(" + hue + ", " + saturation + "%, " + lightness + "%, " + glowAlpha + ")";
+                        ctx.shadowColor = "hsla(" + hue + ", " + saturation + "%, " + lightness + "%, " + glowAlpha + ")";
                         ctx.shadowBlur = glowSize;
                         ctx.shadowOffsetX = 0;
                         ctx.shadowOffsetY = 0;
@@ -326,12 +348,16 @@ var init = function () {
                     ctx.shadowColor = "transparent";
                     ctx.shadowBlur = 0;
                     
-                    // NOVO: Desenhar o texto branco em cima com alto contraste
-                    ctx.fillStyle = "rgba(255, 255, 255, " + p.opacity + ")";
+                    // Desenhar o texto branco brilhante em cima
+                    ctx.fillStyle = "rgba(255, 230, 230, " + p.opacity + ")";
                     ctx.fillText(p.letter, p.x, p.y);
                     
-                    // NOVO: Desenhar um pequeno contorno/sombra adicional para mais definição
-                    ctx.fillStyle = "rgba(255, 100, 100, " + (p.opacity * 0.7) + ")";
+                    // Desenhar um contorno em vermelho intenso para mais definição e romance
+                    ctx.fillStyle = "rgba(255, 20, 50, " + (p.opacity * 0.95) + ")";
+                    ctx.fillText(p.letter, p.x, p.y);
+                    
+                    // Camada adicional de brilho branco no centro
+                    ctx.fillStyle = "rgba(255, 245, 245, " + (p.opacity * 0.9) + ")";
                     ctx.fillText(p.letter, p.x, p.y);
                 }
             }
