@@ -91,9 +91,11 @@ var init = function () {
             // Criar apenas uma partícula por letra para evitar duplicação
             var particlesPerLetter = 1; // Reduzido para evitar duplicação
             for (var j = 0; j < particlesPerLetter; j++) {
-                // Distribuir as partículas em posições iniciais mais espalhadas
-                var initialX = rand() * width;
-                var initialY = rand() * height;
+                // Distribuir as partículas em posições próximas ao centro (onde o coração explodiu)
+                var angle = rand() * Math.PI * 2;
+                var distance = rand() * 100 + 50; // 50-150 pixels do centro
+                var initialX = width / 2 + Math.cos(angle) * distance;
+                var initialY = height / 2 + Math.sin(angle) * distance;
                 
                 textParticles.push({
                     x: initialX,
@@ -107,8 +109,9 @@ var init = function () {
                     size: fontSize * (0.8 + rand() * 0.2), // Menos variação no tamanho
                     force: 0.2 * rand() + 0.7,
                     speed: rand() + 5,
-                    opacity: 0, // Começar invisível
-                    targetOpacity: 0.7 + rand() * 0.3 // Opacidade alvo
+                    opacity: 0.5, // Começar visível (antes era 0)
+                    targetOpacity: 0.9 + rand() * 0.1, // Opacidade alvo aumentada
+                    delay: i * 0.1 // Pequeno atraso para cada letra aparecer
                 });
             }
         }
@@ -223,17 +226,22 @@ var init = function () {
             for (i = 0; i < textParticles.length; i++) {
                 var p = textParticles[i];
                 
+                // Controlar o atraso para aparecer 1 a 1
+                if (stateTimer < p.delay) {
+                    continue; // Pular esta partícula se ainda não chegou seu turno
+                }
+                
                 if (animationState === "text") {
                     // Mover partículas para formar o texto de forma mais suave
                     var dx = p.targetX - p.x;
                     var dy = p.targetY - p.y;
                     // Movimento mais lento e suave
-                    p.x += dx * 0.03; // Reduzido de 0.1 para 0.03
-                    p.y += dy * 0.03; // Reduzido de 0.1 para 0.03
+                    p.x += dx * 0.08; // Velocidade um pouco aumentada para melhor efeito
+                    p.y += dy * 0.08;
                     
                     // Aumentar gradualmente a opacidade
                     if (p.opacity < p.targetOpacity) {
-                        p.opacity += 0.01;
+                        p.opacity += 0.02;
                     }
                 } else {
                     // Explodir partículas
