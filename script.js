@@ -36,7 +36,7 @@ var init = function () {
     var animationState = "heart"; // "heart", "explode", "text", "textExplode"
     var stateTimer = 0;
     var textParticles = [];
-    var message = "Lory ❤️";
+    var message = "Eu não planejei, mas você virou alguém importante pra mim. Topa continuar isso comigo?";
 
     var heartPosition = function (rad) {
         //return [Math.sin(rad), Math.cos(rad)];
@@ -89,7 +89,7 @@ var init = function () {
             var letterX = startX + i * letterSpacing + letterSpacing / 2;
             
             // Criar apenas uma partícula por letra para evitar duplicação
-            var particlesPerLetter = 1; // Reduzido para evitar duplicação
+            var particlesPerLetter = 8; // Reduzido para evitar duplicação
             for (var j = 0; j < particlesPerLetter; j++) {
                 // Distribuir as partículas em posições iniciais mais espalhadas
                 var initialX = rand() * width;
