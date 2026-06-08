@@ -165,8 +165,12 @@ var init = function () {
         }
         
         // Limpar tela
-        ctx.fillStyle = "rgba(0,0,0,.1)";
-        ctx.fillRect(0, 0, width, height);
+        if (animationState === "text" || animationState === "textExplode") {
+            ctx.clearRect(0, 0, width, height); // Limpeza completa para fundo limpo
+        } else {
+            ctx.fillStyle = "rgba(0,0,0,.1)"; // Efeito de rastro no coração
+            ctx.fillRect(0, 0, width, height);
+        }
         
         if (animationState === "heart" || animationState === "explode") {
             pulse((1 + n) * .5, (1 + n) * .5);
