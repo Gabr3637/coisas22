@@ -36,7 +36,7 @@ var init = function () {
     var animationState = "heart"; // "heart", "explode", "text", "textFade", "textExplode"
     var stateTimer = 0;
     var textParticles = [];
-    var message = "𝓛𝓸𝓻𝔂 ❤️";
+    var message = "Lory❤️";
     var firstFrameOfState = true; // Flag para limpeza no início de cada estado
 
     var heartPosition = function (rad) {
