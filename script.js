@@ -37,6 +37,7 @@ var init = function () {
     var stateTimer = 0;
     var textParticles = [];
     var message = "Lory ❤️";
+    var firstFrameOfState = true; // Flag para limpeza no início de cada estado
 
     var heartPosition = function (rad) {
         //return [Math.sin(rad), Math.cos(rad)];
@@ -145,30 +146,37 @@ var init = function () {
         
         // Gerenciar estados da animação
         stateTimer += 0.01;
+        var oldAnimationState = animationState;
         
         if (animationState === "heart" && stateTimer > 5) {
             animationState = "explode";
             stateTimer = 0;
+            firstFrameOfState = true;
         } 
         else if (animationState === "explode" && stateTimer > 1) {
             animationState = "text";
             stateTimer = 0;
+            firstFrameOfState = true;
             createTextParticles();
         }
         else if (animationState === "text" && stateTimer > 5) {
             animationState = "textExplode";
             stateTimer = 0;
+            firstFrameOfState = true;
         }
         else if (animationState === "textExplode" && stateTimer > 1) {
             animationState = "heart";
             stateTimer = 0;
+            firstFrameOfState = true;
         }
         
-        // Limpar tela
-        if (animationState === "text" || animationState === "textExplode") {
-            ctx.clearRect(0, 0, width, height); // Limpeza completa para fundo limpo
+        // Limpar tela - usar clearRect no primeiro frame de cada estado
+        if (firstFrameOfState) {
+            ctx.clearRect(0, 0, width, height);
+            firstFrameOfState = false;
         } else {
-            ctx.fillStyle = "rgba(0,0,0,.1)"; // Efeito de rastro no coração
+            // Após o primeiro frame, usar rastro leve
+            ctx.fillStyle = "rgba(0,0,0,.05)";
             ctx.fillRect(0, 0, width, height);
         }
         
