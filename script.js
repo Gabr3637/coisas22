@@ -175,20 +175,21 @@ var init = function () {
             firstFrameOfState = true;
         }
         
-        // Limpar tela - usar clearRect no primeiro frame de cada estado
-        if (firstFrameOfState) {
-            ctx.clearRect(0, 0, width, height);
-            firstFrameOfState = false;
-        } else {
-            // Após o primeiro frame, usar rastro leve
-            ctx.fillStyle = "rgba(0,0,0,.05)";
-            ctx.fillRect(0, 0, width, height);
-        }
-        
-        if (animationState === "heart" || animationState === "explode") {
-            pulse((1 + n) * .5, (1 + n) * .5);
-            time += ((Math.sin(time)) < 0 ? 9 : (n > 0.8) ? .2 : 1) * config.timeDelta;
-            
+        // === LIMPEZA MELHORADA - Evita ghosting ===
+if (animationState === "textExplode") {
+    ctx.fillStyle = "rgba(0,0,0,0.08)";
+    ctx.fillRect(0, 0, width, height);
+} else {
+    // Limpeza normal com rastro leve
+    ctx.fillStyle = "rgba(0,0,0,0.035)";
+    ctx.fillRect(0, 0, width, height);
+    
+    // Limpeza forte ocasional para evitar acúmulo de ghosting
+    if (Math.random() < 0.03) {  // \~3% das frames limpa mais forte
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.fillRect(0, 0, width, height);
+    }
+}
             // Desenhar coração
             for (i = e.length; i--;) {
                 var u = e[i];
