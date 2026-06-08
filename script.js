@@ -76,7 +76,7 @@ var init = function () {
     var createTextParticles = function() {
         textParticles = [];
         var fontSize = Math.min(width, height) * 0.08;
-        ctx.font = fontSize + "px Arial";
+        ctx.font = fontSize + "px 'French Script MT', cursive";
         ctx.textAlign = "center";
         
         var textWidth = ctx.measureText(message).width;
@@ -292,7 +292,7 @@ var init = function () {
                 
                 // Desenhar partícula com opacidade
                 if (p.opacity > 0) {
-                    ctx.font = p.size + "px Arial";
+                    ctx.font = p.size + "px 'French Script MT', cursive";
                     ctx.fillStyle = p.color.replace(".7)", p.opacity + ")");
                     ctx.fillText(p.letter, p.x, p.y);
                 }
