@@ -98,18 +98,18 @@ var init = function () {
                 textParticles.push({
                     x: heartParticle.trace[0].x,
                     y: heartParticle.trace[0].y,
-                    targetX: letterX,
-                    targetY: startY,
-                    vx: heartParticle.vx,
-                    vy: heartParticle.vy,
+                    targetX: letterX + (rand() - 0.5) * 20, // Adicionar pequena variação
+                    targetY: startY + (rand() - 0.5) * 20,
+                    vx: 0, // Resetar velocidade para suavizar transição
+                    vy: 0,
                     color: heartParticle.f,
                     letter: letter,
                     size: fontSize * (0.8 + rand() * 0.2),
                     force: 0.2 * rand() + 0.7,
-                    speed: rand() + 5,
-                    opacity: 1, // Começar visível já que vinha do coração
+                    speed: 0.15 + rand() * 0.1, // Velocidade de movimento até o texto
+                    opacity: 1,
                     targetOpacity: 0.7 + rand() * 0.3,
-                    isMovingToText: false // Ainda está em fase de explosão
+                    isMovingToText: true // Começar movendo para o texto
                 });
                 
                 particleIndex++;
@@ -227,21 +227,24 @@ var init = function () {
                 var p = textParticles[i];
                 
                 if (animationState === "text") {
-                    // Mover partículas para formar o texto de forma mais suave
+                    // Mover partículas para formar o texto
                     var dx = p.targetX - p.x;
                     var dy = p.targetY - p.y;
+                    var distance = Math.sqrt(dx * dx + dy * dy);
                     
-                    // Movimento mais lento e suave
-                    p.x += dx * 0.05; // Movimento suave em direção ao texto
-                    p.y += dy * 0.05;
-                    
-                    // Marcar quando começar a se mover para o texto
-                    if (!p.isMovingToText && (Math.abs(dx) > 5 || Math.abs(dy) > 5)) {
-                        p.isMovingToText = true;
+                    // Usar velocidade proporcional para convergência mais suave
+                    if (distance > 1) {
+                        p.x += (dx / distance) * p.speed;
+                        p.y += (dy / distance) * p.speed;
+                    } else {
+                        p.x = p.targetX;
+                        p.y = p.targetY;
                     }
                     
                 } else {
                     // Explodir partículas
+                    p.vx += (rand() - 0.5) * 0.5;
+                    p.vy += (rand() - 0.5) * 0.5;
                     p.x += p.vx;
                     p.y += p.vy;
                     p.vx *= 0.98;
