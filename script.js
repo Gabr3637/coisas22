@@ -75,7 +75,8 @@ var init = function () {
     // Função para criar partículas de texto
     var createTextParticles = function() {
         textParticles = [];
-        var fontSize = Math.min(width, height) * 0.08;
+        // AUMENTADO: 3x maior que o anterior (0.08 * 3 = 0.24)
+        var fontSize = Math.min(width, height) * 0.24;
         ctx.font = "700 " + fontSize + "px 'Tangerine', cursive";
         ctx.textAlign = "center";
         
@@ -105,13 +106,15 @@ var init = function () {
                     vy: 0,
                     color: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.7)",
                     letter: letter,
-                    size: fontSize * (0.8 + rand() * 0.2),
+                    size: fontSize * (0.95 + rand() * 0.1), // Tamanho mais consistente
                     force: 0.2 * rand() + 0.7,
                     speed: rand() + 5,
                     opacity: 0,
-                    targetOpacity: 0.9 + rand() * 0.1,
+                    targetOpacity: 1, // Totalmente opaco para melhor destaque
                     delay: i * 0.15, // Atraso para cada letra aparecer sequencialmente
-                    hasAppeared: false
+                    hasAppeared: false,
+                    glowOpacity: 0, // Opacidade do brilho
+                    targetGlowOpacity: 0.8 // Brilho forte
                 });
             }
         }
@@ -159,7 +162,7 @@ var init = function () {
             stateTimer = 0;
             firstFrameOfState = true;
             createTextParticles();
-            // Resetar opacidade das partículas
+            // Resetar opacidade das partículas - começar a desaparecer imediatamente
             for (i = 0; i < e.length; i++) {
                 e[i].particleOpacity = 1;
             }
@@ -238,13 +241,17 @@ var init = function () {
             }
         } 
         else if (animationState === "text" || animationState === "textFade") {
-            // Desenhar partículas que explodiram
+            // Desenhar partículas que explodiram com opacidade reduzida rapidamente
             for (i = e.length; i--;) {
                 var u = e[i];
                 
-                if (animationState === "textFade") {
-                    // Diminuir opacidade das partículas
-                    u.particleOpacity -= 0.01;
+                if (animationState === "text") {
+                    // AUMENTADO: Reduzir opacidade MUITO mais rápido (0.05 em vez de 0.01)
+                    u.particleOpacity -= 0.05;
+                    if (u.particleOpacity < 0) u.particleOpacity = 0;
+                } else if (animationState === "textFade") {
+                    // Diminuir opacidade das partículas ainda mais
+                    u.particleOpacity -= 0.02;
                     if (u.particleOpacity < 0) u.particleOpacity = 0;
                 }
                 
@@ -261,7 +268,7 @@ var init = function () {
                 }
             }
             
-            // Desenhar texto por cima das partículas
+            // Desenhar texto por cima das partículas com efeito GLOW forte
             for (i = 0; i < textParticles.length; i++) {
                 var p = textParticles[i];
                 
@@ -281,19 +288,50 @@ var init = function () {
                         
                         // Aumentar gradualmente a opacidade
                         if (p.opacity < p.targetOpacity) {
-                            p.opacity += 0.03;
+                            p.opacity += 0.05; // Mais rápido para aparecer
+                        }
+                        
+                        // Aumentar opacidade do brilho
+                        if (p.glowOpacity < p.targetGlowOpacity) {
+                            p.glowOpacity += 0.04;
                         }
                     }
                 } else {
                     // textFade - diminuir opacidade
                     p.opacity -= 0.02;
                     if (p.opacity < 0) p.opacity = 0;
+                    
+                    // Diminuir brilho também
+                    p.glowOpacity -= 0.02;
+                    if (p.glowOpacity < 0) p.glowOpacity = 0;
                 }
                 
-                // Desenhar partícula com opacidade
+                // Desenhar partícula com opacidade e EFEITO GLOW
                 if (p.opacity > 0) {
                     ctx.font = "700 " + p.size + "px 'Tangerine', cursive";
-                    ctx.fillStyle = p.color.replace(".7)", p.opacity + ")");
+                    
+                    // NOVO: Desenhar múltiplas camadas de brilho (glow) em vermelho
+                    for (var glowIndex = 15; glowIndex > 0; glowIndex--) {
+                        var glowSize = glowIndex * 0.6;
+                        var glowAlpha = p.glowOpacity * (1 - (glowIndex / 15)) * 0.4; // Reduz conforme afasta do centro
+                        ctx.fillStyle = "rgba(255, 50, 50, " + glowAlpha + ")";
+                        ctx.shadowColor = "rgba(255, 50, 50, " + glowAlpha + ")";
+                        ctx.shadowBlur = glowSize;
+                        ctx.shadowOffsetX = 0;
+                        ctx.shadowOffsetY = 0;
+                        ctx.fillText(p.letter, p.x, p.y);
+                    }
+                    
+                    // Resetar shadow para não afetar próximas renderizações
+                    ctx.shadowColor = "transparent";
+                    ctx.shadowBlur = 0;
+                    
+                    // NOVO: Desenhar o texto branco em cima com alto contraste
+                    ctx.fillStyle = "rgba(255, 255, 255, " + p.opacity + ")";
+                    ctx.fillText(p.letter, p.x, p.y);
+                    
+                    // NOVO: Desenhar um pequeno contorno/sombra adicional para mais definição
+                    ctx.fillStyle = "rgba(255, 100, 100, " + (p.opacity * 0.7) + ")";
                     ctx.fillText(p.letter, p.x, p.y);
                 }
             }
