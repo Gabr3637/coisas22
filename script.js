@@ -89,7 +89,7 @@ var init = function () {
             var letterX = startX + i * letterSpacing + letterSpacing / 2;
             
             // Criar apenas uma partícula por letra para evitar duplicação
-            var particlesPerLetter = 8; // Reduzido para evitar duplicação
+            var particlesPerLetter = 1; // Reduzido para evitar duplicação
             for (var j = 0; j < particlesPerLetter; j++) {
                 // Distribuir as partículas em posições iniciais mais espalhadas
                 var initialX = rand() * width;
