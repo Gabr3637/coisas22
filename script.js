@@ -89,29 +89,28 @@ var init = function () {
             var letterX = startX + i * letterSpacing + letterSpacing / 2;
             
             // Criar apenas uma partícula por letra para evitar duplicação
-            var particlesPerLetter = 1; // Reduzido para evitar duplicação
+            var particlesPerLetter = 1;
             for (var j = 0; j < particlesPerLetter; j++) {
-                // Distribuir as partículas em posições próximas ao centro (onde o coração explodiu)
-                var angle = rand() * Math.PI * 2;
-                var distance = rand() * 100 + 50; // 50-150 pixels do centro
-                var initialX = width / 2 + Math.cos(angle) * distance;
-                var initialY = height / 2 + Math.sin(angle) * distance;
+                // Começar DO CENTRO (onde o coração explodiu)
+                var initialX = width / 2;
+                var initialY = height / 2;
                 
                 textParticles.push({
                     x: initialX,
                     y: initialY,
                     targetX: letterX,
                     targetY: startY,
-                    vx: (rand() - 0.5) * 5, // Velocidade inicial reduzida
-                    vy: (rand() - 0.5) * 5, // Velocidade inicial reduzida
+                    vx: 0,
+                    vy: 0,
                     color: "hsla(0," + ~~(40 * rand() + 100) + "%," + ~~(60 * rand() + 20) + "%,.7)",
                     letter: letter,
-                    size: fontSize * (0.8 + rand() * 0.2), // Menos variação no tamanho
+                    size: fontSize * (0.8 + rand() * 0.2),
                     force: 0.2 * rand() + 0.7,
                     speed: rand() + 5,
-                    opacity: 0.5, // Começar visível (antes era 0)
-                    targetOpacity: 0.9 + rand() * 0.1, // Opacidade alvo aumentada
-                    delay: i * 0.1 // Pequeno atraso para cada letra aparecer
+                    opacity: 0,
+                    targetOpacity: 0.9 + rand() * 0.1,
+                    delay: i * 0.15, // Atraso para cada letra aparecer sequencialmente
+                    hasAppeared: false
                 });
             }
         }
@@ -226,22 +225,24 @@ var init = function () {
             for (i = 0; i < textParticles.length; i++) {
                 var p = textParticles[i];
                 
-                // Controlar o atraso para aparecer 1 a 1
-                if (stateTimer < p.delay) {
-                    continue; // Pular esta partícula se ainda não chegou seu turno
-                }
-                
                 if (animationState === "text") {
-                    // Mover partículas para formar o texto de forma mais suave
-                    var dx = p.targetX - p.x;
-                    var dy = p.targetY - p.y;
-                    // Movimento mais lento e suave
-                    p.x += dx * 0.08; // Velocidade um pouco aumentada para melhor efeito
-                    p.y += dy * 0.08;
-                    
-                    // Aumentar gradualmente a opacidade
-                    if (p.opacity < p.targetOpacity) {
-                        p.opacity += 0.02;
+                    // Verificar se é hora desta letra aparecer
+                    if (stateTimer >= p.delay) {
+                        if (!p.hasAppeared) {
+                            p.hasAppeared = true;
+                        }
+                        
+                        // Mover partículas para formar o texto
+                        var dx = p.targetX - p.x;
+                        var dy = p.targetY - p.y;
+                        // Movimento mais rápido e direto
+                        p.x += dx * 0.12;
+                        p.y += dy * 0.12;
+                        
+                        // Aumentar gradualmente a opacidade
+                        if (p.opacity < p.targetOpacity) {
+                            p.opacity += 0.03;
+                        }
                     }
                 } else {
                     // Explodir partículas
@@ -256,10 +257,12 @@ var init = function () {
                     if (p.opacity < 0) p.opacity = 0;
                 }
                 
-                // Desenhar partícula com opacidade
-                ctx.font = p.size + "px Arial";
-                ctx.fillStyle = p.color.replace(".7)", p.opacity + ")");
-                ctx.fillText(p.letter, p.x, p.y);
+                // Desenhar partícula com opacidade (só se apareceu ou está explodindo)
+                if (p.hasAppeared || animationState === "textExplode") {
+                    ctx.font = p.size + "px Arial";
+                    ctx.fillStyle = p.color.replace(".7)", p.opacity + ")");
+                    ctx.fillText(p.letter, p.x, p.y);
+                }
             }
         }
 
